@@ -1,6 +1,12 @@
 # portable-co2-monitor
 Project for a portable CO2 Monitor
 
+## Progress
+
+I have built up a CAD model of a basic belt-hooked box, the SenseAir S8, and an Arduino Nano from a model catalog.
+
+![Fusion 360 Image](docs/images/Fusion%20360%201.png)
+
 ## The Idea
 
 This is the first project where I took the time to think through an ideal version of a CO2 monitor, then I broke it down into small pieces and will be attempting to execute on it
