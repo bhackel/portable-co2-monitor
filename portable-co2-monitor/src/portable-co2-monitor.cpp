@@ -2,12 +2,10 @@
 
 #include <Arduino.h>
 #include "s8_uart.h"
-#include <ArduinoBLE.h>
 #include <Wire.h>
 
-#define UPDATE_DELAY 5000
-#define SAFE_LEVEL  1000
-#define BAD_LEVEL   1400
+#include "portable-co2-monitor.h"
+
 
 S8_UART *sensor_S8;
 S8_sensor sensor;
@@ -48,6 +46,11 @@ void setup() {
 
   // add service
   BLE.addService(co2Service);
+
+  // set read request handler for characteristics
+  co2CurLevel.setEventHandler(BLERead, co2CurLevelCharacteristicRead);
+  co2MaxLevel.setEventHandler(BLERead, co2MaxLevelCharacteristicRead);
+  co2AvgLevel.setEventHandler(BLERead, co2AvgLevelCharacteristicRead);
 
   // start advertising the service
   BLE.advertise();
@@ -131,4 +134,15 @@ void loop() {
     // turn off the LED
     digitalWrite(LED_BUILTIN, LOW);
   }
+}
+
+/* Read request handler for characteristics */
+void co2CurLevelCharacteristicRead(BLEDevice central, BLECharacteristic characteristic) {
+  co2CurLevel.writeValue(sensor.co2);
+}
+void co2MaxLevelCharacteristicRead(BLEDevice central, BLECharacteristic characteristic) {
+  co2MaxLevel.writeValue(max_co2);
+}
+void co2AvgLevelCharacteristicRead(BLEDevice central, BLECharacteristic characteristic) {
+  co2AvgLevel.writeValue(round(ave_co2));
 }
