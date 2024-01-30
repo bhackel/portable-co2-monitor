@@ -7,76 +7,67 @@
 #include "portable-co2-monitor.h"
 
 
-S8_UART *sensor_S8;
+S8_UART *sensorS8;
 S8_sensor sensor;
 
-int max_co2 = 0;
-double ave_co2 = 0.0;
-unsigned long n_measurements = 0;
+int maxCo2 = 0;
+double avgCo2 = 0.0;
+unsigned long numMeasurements = 0;
+int lastMeasurementTime = 0;
+int curTime = 0;
 
-int last_measurement_timestamp = 0;
-
- // Set up BLE characteristics (randomly generated UUID, with 4 hex values modified)
+// Set up BLE services and characteristics
 BLEService co2Service("FA11B9C1-426C-485B-8184-03EC0E0741EC");
-BLEIntCharacteristic co2CurLevel("FA116969-426C-485B-8184-03EC0E0741EC", BLERead | BLENotify);
-BLEIntCharacteristic co2MaxLevel("FA116970-426C-485B-8184-03EC0E0741EC", BLERead | BLENotify);
-BLEIntCharacteristic co2AvgLevel("FA116971-426C-485B-8184-03EC0E0741EC", BLERead | BLENotify);
+BLEIntCharacteristic co2CurLevelCharacteristic("FA116969-426C-485B-8184-03EC0E0741EC", BLERead | BLENotify);
+BLEIntCharacteristic co2MaxLevelCharacteristic("FA116970-426C-485B-8184-03EC0E0741EC", BLERead | BLENotify);
+BLEIntCharacteristic co2AvgLevelCharacteristic("FA116971-426C-485B-8184-03EC0E0741EC", BLERead | BLENotify);
+BLEService ledService("8370846E-2189-44BC-86F9-76FD3772BA84");
+BLEIntCharacteristic ledStatusCharacteristic("83706969-2189-44BC-86F9-76FD3772BA84", BLEWrite);
 
 void setup() {
 
-  // Set up logging
+  // Set up Serial for logging
   Serial.begin(9600);
   Serial.println("Starting up...");
 
-  // Set up BLE
+  // Set up BLE services and characteristics
   while (!BLE.begin()) {
     Serial.println("Waiting for BLE to start");
     delay(1);
   }
-
-  // set the local name that the peripheral advertises:
-  BLE.setLocalName("BLE_CO2Monitor");
-  // set the UUID for the service:
-  BLE.setAdvertisedService(co2Service);
-
-  // add the characteristic to the service
-  co2Service.addCharacteristic(co2CurLevel);
-  co2Service.addCharacteristic(co2MaxLevel);
-  co2Service.addCharacteristic(co2AvgLevel);
-
-  // add service
+  BLE.setLocalName("CO2Monitor");
+  BLE.setAdvertisedService(co2Service); // sets the primary service
   BLE.addService(co2Service);
-
-  // set read request handler for characteristics
-  co2CurLevel.setEventHandler(BLERead, co2CurLevelCharacteristicRead);
-  co2MaxLevel.setEventHandler(BLERead, co2MaxLevelCharacteristicRead);
-  co2AvgLevel.setEventHandler(BLERead, co2AvgLevelCharacteristicRead);
-
-  // start advertising the service
+  co2Service.addCharacteristic(co2CurLevelCharacteristic);
+  co2Service.addCharacteristic(co2MaxLevelCharacteristic);
+  co2Service.addCharacteristic(co2AvgLevelCharacteristic);
+  co2CurLevelCharacteristic.setEventHandler(BLERead, co2CurLevelCharacteristicRead);
+  co2MaxLevelCharacteristic.setEventHandler(BLERead, co2MaxLevelCharacteristicRead);
+  co2AvgLevelCharacteristic.setEventHandler(BLERead, co2AvgLevelCharacteristicRead);
   BLE.advertise();
 
-  // Initialize UART and S8 sensor
+  // Initialize UART connection and S8 sensor
   Serial1.begin(S8_BAUDRATE);
-  sensor_S8 = new S8_UART(Serial1); 
+  sensorS8 = new S8_UART(Serial1); 
 
-  // Check if S8 is available
-  sensor_S8->get_firmware_version(sensor.firm_version);
-  int len = strlen(sensor.firm_version);
-  int n_tries = 1;
-  while (len == 0 && n_tries < 120) {
+  // Check if S8 sensor is available by reading firmware version
+  sensorS8->get_firmware_version(sensor.firm_version);
+  int firmwareStrLen = strlen(sensor.firm_version);
+  int numTries = 1;
+  int s8AttemptsLimit = 120;
+  while (firmwareStrLen == 0 && numTries++ < s8AttemptsLimit) {
       delay(250);
-      sensor_S8->get_firmware_version(sensor.firm_version);
-      len = strlen(sensor.firm_version);
-      n_tries++; // give up after some number of tries
+      sensorS8->get_firmware_version(sensor.firm_version);
+      firmwareStrLen = strlen(sensor.firm_version);
   }
 
-  // Show basic S8 sensor info
+  // Log basic S8 sensor info
   Serial.println("SenseAir S8 Firmware:");
-  if (len == 0) Serial.print("N/A");
+  if (firmwareStrLen == 0) Serial.print("N/A");
   else Serial.println(sensor.firm_version);
-  sensor.sensor_id = sensor_S8->get_sensor_ID();
+  sensor.sensor_id = sensorS8->get_sensor_ID();
 
-  // Show this device's bluetooth mac address
+  // Log this device's bluetooth mac address
   Serial.println("Bluetooth MAC address:");
   BLEDevice central = BLE.central();
   Serial.print("BLE MAC Address: ");
@@ -84,65 +75,60 @@ void setup() {
 }
 
 void loop() {
+  // Check if a device (central) connects to this device (peripheral)
   BLEDevice central = BLE.central();
-
-  // if a central is connected to the peripheral:
   if (central) {
-    // print the central's BT address:
     Serial.print("Connected to central: ");
     Serial.println(central.address());
-    // turn on LED to indicate connection:
-    digitalWrite(LED_BUILTIN, HIGH);
-
-    // while the central remains connected:
+    digitalWrite(LED_BUILTIN, HIGH); // indicate connection
     while (central.connected()) {
       // Check if enough time has passed since last check
-      if (millis() - last_measurement_timestamp < UPDATE_DELAY) {
+      curTime = millis();
+      if (curTime > lastMeasurementTime + MEASUREMENT_INTERVAL) {
         continue;
       }
-      last_measurement_timestamp = millis();
+      lastMeasurementTime = millis();
 
-      char buffer[17]; // to hold formated print
-
-      // Get and display CO2 measure
-      sensor.co2 = sensor_S8->get_co2();
-      sprintf(buffer, "%4d", sensor.co2);
-      Serial.println("CO2: " + String(buffer));
-
-      // max since start-up
-      if (sensor.co2 > max_co2) { max_co2 = sensor.co2; }
-      sprintf(buffer, "%-4d", max_co2);
-      Serial.println("Max: " + String(buffer));
-
-      // average
-      if(n_measurements == 0) {
-          ave_co2 = (double) sensor.co2;
-      } else {
-          ave_co2 = (ave_co2 * (double)n_measurements + (double)sensor.co2) / (double)(n_measurements+1);
+      
+      char printBuffer[17];
+      // Get current CO2 measurement
+      sensor.co2 = sensorS8->get_co2();
+      sprintf(printBuffer, "%4d", sensor.co2);
+      Serial.println("CO2: " + String(printBuffer));
+      // Caulcualte max since start-up
+      if (sensor.co2 > maxCo2) { 
+        maxCo2 = sensor.co2; 
       }
-      n_measurements++;
-      int ave_co2_int = round(ave_co2);
-      sprintf(buffer, "%4d", ave_co2_int);
-      Serial.println("Ave: " + String(buffer));
+      sprintf(printBuffer, "%-4d", maxCo2);
+      Serial.println("Max: " + String(printBuffer));
+      // Calculate average CO2 level
+      if(numMeasurements == 0) {
+          avgCo2 = (double) sensor.co2;
+      } else {
+          avgCo2 = (avgCo2 * (double)numMeasurements + (double)sensor.co2) / (double)(numMeasurements + 1);
+      }
+      numMeasurements++;
+      int avgCo2Int = round(avgCo2);
+      sprintf(printBuffer, "%4d", avgCo2Int);
+      Serial.println("Ave: " + String(printBuffer));
 
       // Update BLE characteristics
-      co2CurLevel.writeValue(sensor.co2);
-      co2MaxLevel.writeValue(max_co2);
-      co2AvgLevel.writeValue(ave_co2_int);
+      co2CurLevelCharacteristic.writeValue(sensor.co2);
+      co2MaxLevelCharacteristic.writeValue(maxCo2);
+      co2AvgLevelCharacteristic.writeValue(avgCo2Int);
     }
   } else {
-    // turn off the LED
     digitalWrite(LED_BUILTIN, LOW);
   }
 }
 
 /* Read request handler for characteristics */
 void co2CurLevelCharacteristicRead(BLEDevice central, BLECharacteristic characteristic) {
-  co2CurLevel.writeValue(sensor.co2);
+  co2CurLevelCharacteristic.writeValue(sensor.co2);
 }
 void co2MaxLevelCharacteristicRead(BLEDevice central, BLECharacteristic characteristic) {
-  co2MaxLevel.writeValue(max_co2);
+  co2MaxLevelCharacteristic.writeValue(maxCo2);
 }
 void co2AvgLevelCharacteristicRead(BLEDevice central, BLECharacteristic characteristic) {
-  co2AvgLevel.writeValue(round(ave_co2));
+  co2AvgLevelCharacteristic.writeValue(round(avgCo2));
 }
