@@ -1,63 +1,61 @@
 # portable-co2-monitor
-Project for a portable CO2 Monitor
 
-## Progress
+## Overview
 
-I have built up a CAD model of a basic belt-hooked box, the SenseAir S8, and an Arduino Nano from a model catalog.
+Recent research has shown possible correlations between high CO2 concentration in indoor environments and decreased cognitive function. As someone that is curious about optimizing my brain for productivity, I wanted to investigate this correlation.
+
+This idea started when I attended an office hour for my algorithms class. This took place in a very small room, packed full of students. I immediately felt the thickness of the air in the room, and shortly after, lost focus and forgot my question. I left for a bit to reconcentrate, believing that I might be tired from a lack of sleep. However, when I went back into the room, I lost my focus once again. I heard about CO2 fatigue from a YouTube video and was curious about it.
+
+![Office Hour Room](todo-get-image)
+
+I looked around on Amazon for a cheap monitor, but the majority of the devices I found were above $100 (there are a lot of new devices below $40 now). I was not willing to spend so much money on a curiosity, so I decided to look for a cheap alternative.
+
+## V0 Prototype Design
+
+I looked on AliExpress to see if I could find a cheap sensor to use. I quickly found the SenseAir S8 for around $20, and decided to buy one.
+
+I used a spare Arduino Nano 33 IoT that I had on hand and attempted to connect it to the SenseAir S8. I found [this article](https://karlduino.org/CO2monitor/) describing how someone else connected their Arduino to this sensor, so I followed their process to create my code. I had to slightly modify the code to work with the hardware serial connections instead of using the SoftwareSerial package, but otherwise had minor issues.
+
+After verifying that the sensor works, I decided to begin designing ways to make the device more portable. This began with a CAD model.
 
 ![Fusion 360 Image](docs/images/Fusion%20360%201.png)
 
-## The Idea
+My goal here was to try to visualize the parts so that I could think of ideas on how to integrate everything. I printed this at my local makerspace and proceeded with integration.
 
-This is the first project where I took the time to think through an ideal version of a CO2 monitor, then I broke it down into small pieces and will be attempting to execute on it
+I roughly put the parts on a sheet of perfboard and measured out the width that I decided on for my CAD model. Everything seemed to fit, so I proceeded to cut the board.
 
-Full End-To-End project
- - IOS App that can sync data from the device
- - Device that monitors CO2 levels, can be attached to person
+![Perfboard Design](docs/images/Design%201.jpg)
 
-Software requirements:
-- IOS App
-	- Want to build in swift
-	- Needs to connect to the device over bluetooth, then read some stored data, then clear the stored data on the device, and store it in  app
-	- Display a graph that shows CO2 exposure over the day
-	- Export button to download CSV with "time: ppm" values
-- Microcontroller code
-	- Possibly translate it into Rust
-	- data should be collected every 30? seconds
-	- Poll the Senseair using raw Serial comms
-	- First develop on arduino 33 iot
-	- Then create PCB design with the components
-	- This must happen before 3D print can be done
+I decided to flip the CO2 sensor because the foam diffuser needs access to air, and I planned to face this towards the side of the mount.
 
-Hardware requirements:
-- Option 1: Wrist
-	- 3D print a decently big rectangle that attaches to the wrist using Velcro
-	- Power using a wire to a battery bank (need 5V), or integrate battery somehow
-	- This seems like the ultimate option, copy a Fitbit in design. highest difficulty
-- Option 2: Belt hook
-	- 3D print a box that clips onto the belt
-	- Power using a wire to a battery bank that is in pocket
-	- This is where I should start
+![Cut Perfboard with parts](docs/images/Design%203.jpg)
 
-Procedure
-- We already have a working CO2 monitor
-- #### ARDUINO
-- Add Bluetooth functionality so that I can connect to it with my laptop and read the current CO2 value
-- Add Bluetooth functionality so that I can connect to it, read up to the past 100 values, then these values are cleared from a storage in memory
-- #### APP
-- ~~Create a swift Hello World app and send it to my phone~~ Done 12/31/23
-- Add Bluetooth functionality to the swift app so that it can connect to the Arduino and read the current CO2 value to the screen
-- Have it continually read the CO2 value and put it on the screen
-- Have it read the past 100 values
-- Create a storage for storing CO2 values over time
-- Create a graph that shows these values
-- Create a table that shows these values
-- Create a button that allows to share a CSV with these values
-- #### PCB
-- Design a PCB that integrates all the components nicely
-- Make sure to figure out how to get that microcontroller into there
-- Somehow get the power connected with a connector
-- I am unfamiliar in this part
-- #### 3D Printing
-- Create a box that encases the PCB and has poles or something to mount it on
-- Don't be lazy and use zipties, make this look professional with screw mounts
+I connected up the pins of the Arduino and the CO2 sensor using solder and wires. Yes, I lack good soldering skills.
+
+The wiring is as follows
+
+- Green Wire: Arduino TX Pin <-> SenseAir S8 RX Pin
+- Blue Wire: Arduino RX Pin <-> SenseAir S8 TX Pin
+- Red Wire: Arduino VUSB <-> SenseAir S8 G+ Pin
+- Black Wire: Arduino GND <-> SenseAir S8 G0 Pin
+
+![Back side of perfboard with soldered wires](docs/images/Design%202.jpg)
+
+The next step was to somehow mount the board into the case. However, although I was planning on powering the device over USB, I realized at this point that this was not feasible because of a lack of space. I then decided to cut a broken USB cable and solder it directly to the board.
+
+![Board and mount with USB cable](docs/images/Assembling%201.jpg)
+
+Next was to shove the board into the case and mount it somehow. I decided to put a screw through the case and the board, and then attach it with a washer.
+
+![Board inside of case](docs/images/Assembling%203.jpg)
+
+After using some very ugly hot glue to attach the side panel of the case, I ended with the final design.
+
+![Completed build](docs/images/Final%202.jpg)
+![Completed build on belt](docs/images/Final%201.jpg)
+
+## iOS App
+
+The second half of this project involves an accompanying iOS app that connects to the device over Bluetooth.
+
+More to come later
