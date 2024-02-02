@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 #include "s8_uart.h"
-#include <Wire.h>
 
 #include "portable-co2-monitor.h"
 
@@ -25,7 +24,6 @@ BLEService ledService("8370846E-2189-44BC-86F9-76FD3772BA84");
 BLEIntCharacteristic ledStatusCharacteristic("83706969-2189-44BC-86F9-76FD3772BA84", BLEWrite);
 
 void setup() {
-
   // Set up Serial for logging
   Serial.begin(9600);
   Serial.println("Starting up...");
@@ -67,24 +65,19 @@ void setup() {
   else Serial.println(sensor.firm_version);
   sensor.sensor_id = sensorS8->get_sensor_ID();
 
-  // Log this device's bluetooth mac address
-  Serial.println("Bluetooth MAC address:");
-  BLEDevice central = BLE.central();
-  Serial.print("BLE MAC Address: ");
-  Serial.println(central.address());
+  Serial.println("Bluetooth device active, waiting for connections...");
 }
 
 void loop() {
   // Check if a device (central) connects to this device (peripheral)
   BLEDevice central = BLE.central();
   if (central) {
-    Serial.print("Connected to central: ");
+    Serial.print("Connected to ");
     Serial.println(central.address());
-    digitalWrite(LED_BUILTIN, HIGH); // indicate connection
     while (central.connected()) {
       // Check if enough time has passed since last check
       curTime = millis();
-      if (curTime > lastMeasurementTime + MEASUREMENT_INTERVAL) {
+      if (curTime <= (lastMeasurementTime + MEASUREMENT_INTERVAL)) {
         continue;
       }
       lastMeasurementTime = millis();
@@ -112,13 +105,18 @@ void loop() {
       sprintf(printBuffer, "%4d", avgCo2Int);
       Serial.println("Ave: " + String(printBuffer));
 
+      // Update LED state
+      if (ledStatusCharacteristic.written()) {
+        Serial.println("LED status changed");
+        int status = boolean(ledStatusCharacteristic.value()) ? HIGH : LOW;
+        digitalWrite(LED_BUILTIN, status);    
+      }
+
       // Update BLE characteristics
       co2CurLevelCharacteristic.writeValue(sensor.co2);
       co2MaxLevelCharacteristic.writeValue(maxCo2);
       co2AvgLevelCharacteristic.writeValue(avgCo2Int);
     }
-  } else {
-    digitalWrite(LED_BUILTIN, LOW);
   }
 }
 
