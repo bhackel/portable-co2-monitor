@@ -6,7 +6,7 @@ Recent research has shown possible correlations between high CO2 concentration i
 
 This idea started when I attended an office hour for my algorithms class. This took place in a very small room, packed full of students. I immediately felt the thickness of the air in the room, and shortly after, lost focus and forgot my question. I left for a bit to reconcentrate, believing that I might be tired from a lack of sleep. However, when I went back into the room, I lost my focus once again. I heard about CO2 fatigue from a YouTube video and was curious about it.
 
-![Office Hour Room](todo-get-image)
+![Office Hour Room](docs/images/Office%20Room.jpeg)
 
 I looked around on Amazon for a cheap monitor, but the majority of the devices I found were above $100 (there are a lot of new devices below $40 now). I was not willing to spend so much money on a curiosity, so I decided to look for a cheap alternative.
 
