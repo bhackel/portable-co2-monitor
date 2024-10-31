@@ -5,3 +5,4 @@ portable-co2-monitor/.vscode/launch.json
 portable-co2-monitor/.vscode/ipch
 portable-co2-monitor/.vscode/extensions.json
 .DS_Store
+/app/iOSArduinoBLE.xcodeproj/xcuserdata
