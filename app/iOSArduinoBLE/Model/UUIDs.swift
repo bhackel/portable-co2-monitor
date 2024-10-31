@@ -9,9 +9,9 @@ import Foundation
 import CoreBluetooth
 
 enum UUIDs {
-    static let ledService = CBUUID(string: "cd48409a-f3cc-11ed-a05b-0242ac120003")
-    static let ledStatusCharacteristic = CBUUID(string:  "cd48409b-f3cc-11ed-a05b-0242ac120003") // Write
+    static let ledService = CBUUID(string: "8370846E-2189-44BC-86F9-76FD3772BA84")
+    static let ledStatusCharacteristic = CBUUID(string:  "83706969-2189-44BC-86F9-76FD3772BA84") // Write
     
-    static let sensorService = CBUUID(string: "d888a9c2-f3cc-11ed-a05b-0242ac120003")
-    static let temperatureCharacteristic = CBUUID(string:  "d888a9c3-f3cc-11ed-a05b-0242ac120003") // Read | Notify
+    static let sensorService = CBUUID(string: "FA11B9C1-426C-485B-8184-03EC0E0741EC")
+    static let temperatureCharacteristic = CBUUID(string:  "FA116969-426C-485B-8184-03EC0E0741EC") // Read | Notify
 }
