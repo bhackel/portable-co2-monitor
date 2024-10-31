@@ -11,14 +11,11 @@ import CoreBluetooth
 protocol PeripheralUseCaseProtocol {
     
     var peripheral: Peripheral? { get set }
-    
-    var onWriteLedState: ((Bool) -> Void)? { get set }
+
     var onReadTemperature: ((Int) -> Void)? { get set }
     var onPeripheralReady: (() -> Void)? { get set }
     var onError: ((Error) -> Void)? { get set }
 
-
-    func writeLedState(isOn: Bool)
     func readTemperature()
     func notifyTemperature(_ isOn: Bool)
 }
@@ -36,7 +33,6 @@ class PeripheralUseCase: NSObject, PeripheralUseCaseProtocol {
         peripheral?.cbPeripheral
     }
     
-    var onWriteLedState: ((Bool) -> Void)?
     var onReadTemperature: ((Int) -> Void)?
     var onPeripheralReady: (() -> Void)?
     var onError: ((Error) -> Void)?
@@ -47,13 +43,6 @@ class PeripheralUseCase: NSObject, PeripheralUseCaseProtocol {
     
     func discoverServices() {
         cbPeripheral?.discoverServices([UUIDs.ledService, UUIDs.sensorService])
-    }
-    
-    func writeLedState(isOn: Bool) {
-        guard let ledCharacteristic = discoveredCharacteristics[UUIDs.ledStatusCharacteristic] else {
-            return
-        }
-        cbPeripheral?.writeValue(Data(isOn ? [0x01] : [0x00]), for: ledCharacteristic, type: .withResponse)
     }
     
     func readTemperature() {
@@ -119,14 +108,6 @@ extension PeripheralUseCase: CBPeripheralDelegate {
             return
         }
         switch characteristic.uuid {
-        case UUIDs.ledStatusCharacteristic:
-            let value: UInt8 = {
-                guard let value = characteristic.value?.first else {
-                    return 0
-                }
-                return value
-            }()
-            onWriteLedState?(value != 0 ? true : false)
         default:
             fatalError()
         }
@@ -135,11 +116,11 @@ extension PeripheralUseCase: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         switch characteristic.uuid {
         case UUIDs.temperatureCharacteristic:
-            let value: UInt8 = {
-                guard let value = characteristic.value?.first else {
+            let value: UInt32 = {
+                guard let data = characteristic.value else {
                     return 0
                 }
-                return value
+                return data.withUnsafeBytes { $0.load(as: UInt32.self) }
             }()
             onReadTemperature?(Int(value))
         default:

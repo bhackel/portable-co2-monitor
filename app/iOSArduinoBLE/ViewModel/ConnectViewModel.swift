@@ -30,10 +30,6 @@ final class ConnectViewModel: ObservableObject {
             self?.state = .temperature(value)
         }
         
-        useCase.onWriteLedState = { [weak self] value in
-            self?.state = .ledState(value)
-        }
-        
         useCase.onError = { error in
             print("Error \(error)")
         }
@@ -50,14 +46,6 @@ final class ConnectViewModel: ObservableObject {
     func readTemperature() {
         useCase.readTemperature()
     }
-    
-    func turnOnLed() {
-        useCase.writeLedState(isOn: true)
-    }
-    
-    func turnOffLed() {
-        useCase.writeLedState(isOn: false)
-    }
 }
 
 extension ConnectViewModel {
@@ -65,6 +53,5 @@ extension ConnectViewModel {
         case idle
         case ready
         case temperature(Int)
-        case ledState(Bool)
     }
 }
