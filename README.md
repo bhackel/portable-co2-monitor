@@ -1,5 +1,8 @@
 # portable-co2-monitor
 
+## View an updated log on my website
+https://brycehackel.me/posts/1728693895830-portable-co2-monitor-version-0.5/
+
 ## Overview
 
 Recent research has shown possible correlations between high CO2 concentration in indoor environments and decreased cognitive function. As someone that is curious about optimizing my brain for productivity, I wanted to investigate this correlation.
