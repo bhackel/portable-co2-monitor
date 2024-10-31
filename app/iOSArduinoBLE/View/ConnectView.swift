@@ -17,49 +17,42 @@ struct ConnectView: View {
     @State var isToggleOn: Bool = false
     @State var isPeripheralReady: Bool = false
     @State var lastTemperature: Int = 0
+    
+    // Define thresholds and constants for background colors
+    private let minTemperature: Double = 400
+    private let maxTemperature: Double = 1500
+    private let opacityValue: Double = 0.2
+
+    // Computed property to calculate the background color
+    private var backgroundColor: Color {
+        let scaledTemperature = min(max((Double(lastTemperature) - minTemperature) / (maxTemperature - minTemperature), 0.0), 1.0)
+        let redComponent = scaledTemperature
+        let greenComponent = 1.0 - scaledTemperature
+
+        return Color(red: redComponent, green: greenComponent, blue: 0.0).opacity(opacityValue)
+    }
 
     var body: some View {
         VStack {
             Text(viewModel.connectedPeripheral.name ?? "Unknown")
                 .font(.title)
-            ZStack {
-                CardView()
+            Spacer()
+                .frame(height: 20) // Adjust the height to control the vertical spacing between sections
+            VStack {
+                Text("\(lastTemperature) ppm")
+                    .font(.largeTitle)
                 HStack {
-                    Text("Led")
-                        .padding(.horizontal)
-                    Button("On") {
-                        viewModel.turnOnLed()
-                    }
-                    .disabled(!isPeripheralReady)
-                    .buttonStyle(.borderedProminent)
-                    Button("Off") {
-                        viewModel.turnOffLed()
-                    }
-                    .disabled(!isPeripheralReady)
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            ZStack {
-                CardView()
-                VStack {
-                    Text("\(lastTemperature) °C")
-                        .font(.largeTitle)
-                    HStack {
-                        Spacer()
-                            .frame(alignment: .trailing)
-                        Toggle("Notify", isOn: $isToggleOn)
-                            .disabled(!isPeripheralReady)
-                        Button("READ") {
-                            viewModel.readTemperature()
-                        }
+                    Toggle("Notify", isOn: $isToggleOn)
                         .disabled(!isPeripheralReady)
-                        .buttonStyle(.borderedProminent)
-                        Spacer()
-                            .frame(alignment: .trailing)
-
+                        .padding(.trailing, 10)
+                    Button("READ") {
+                        viewModel.readTemperature()
                     }
+                    .disabled(!isPeripheralReady)
+                    .buttonStyle(.borderedProminent)
                 }
             }
+            .padding()
             Spacer()
                 .frame(maxHeight:.infinity)
             Button {
@@ -71,6 +64,7 @@ struct ConnectView: View {
             .buttonStyle(.borderedProminent)
             .padding(.horizontal)
         }
+        .background(backgroundColor)
         .onChange(of: isToggleOn) { newValue in
             if newValue == true {
                 viewModel.startNotifyTemperature()
@@ -97,12 +91,9 @@ struct PeripheralView_Previews: PreviewProvider {
         
         var peripheral: Peripheral?
         
-        var onWriteLedState: ((Bool) -> Void)?
         var onReadTemperature: ((Int) -> Void)?
         var onPeripheralReady: (() -> Void)?
         var onError: ((Error) -> Void)?
-
-        func writeLedState(isOn: Bool) {}
         
         func readTemperature() {
             onReadTemperature?(25)
@@ -110,7 +101,7 @@ struct PeripheralView_Previews: PreviewProvider {
         
         func notifyTemperature(_ isOn: Bool) {}
     }
-    
+
     static var viewModel = {
         ConnectViewModel(useCase: FakeUseCase(),
                             connectedPeripheral: .init(name: "iOSArduinoBoard"))
@@ -129,3 +120,4 @@ struct CardView: View {
       .foregroundColor(.init(uiColor: .secondarySystemBackground))
   }
 }
+
